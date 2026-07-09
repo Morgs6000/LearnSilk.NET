@@ -263,7 +263,10 @@ public class Game
         _shader.Use();
 
         Matrix4x4 model = Matrix4x4.Identity;
-        model *= Matrix4x4.CreateFromAxisAngle(new Vector3(1.0f, 0.0f, 0.0f), MathHelper.DegressToRadians(-55.0f));
+        model *= Matrix4x4.CreateFromAxisAngle(
+            Vector3.Normalize(new Vector3(1.0f, 0.0f, 0.0f)), 
+            MathHelper.DegressToRadians(-55.0f)
+        );
 
         Matrix4x4 view = Matrix4x4.Identity;
         view *= Matrix4x4.CreateTranslation(new Vector3(0.0f, 0.0f, -3.0f));

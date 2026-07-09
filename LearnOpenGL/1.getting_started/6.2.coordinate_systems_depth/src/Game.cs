@@ -25,16 +25,56 @@ public class Game
     private readonly float[] _vertices =
     {
         // positions           // colors           // texture coords
-        -0.5f, -0.5f,  0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // 0 // inferior esquerdo
-         0.5f, -0.5f,  0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 1 // inferior direito
-         0.5f,  0.5f,  0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // 2 // superior direito
-        -0.5f,  0.5f,  0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // 3 // superior esquerdo
+        -0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // 0
+        -0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 1
+        -0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // 2
+        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 3
+        
+         0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // 4
+         0.5f, -0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 5
+         0.5f,  0.5f, -0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // 6
+         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 7
+        
+        -0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // 8
+         0.5f, -0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 9
+         0.5f, -0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // 10
+        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 11
+        
+        -0.5f,  0.5f,  0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // 12
+         0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 13
+         0.5f,  0.5f, -0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // 14
+        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 15
+        
+         0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // 16
+        -0.5f, -0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 17
+        -0.5f,  0.5f, -0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // 18
+         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 19
+        
+        -0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // 20
+         0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 21
+         0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // 22
+        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // 23
     };
 
     private readonly uint[] _indices = // observe que começamos do 0!
     {
         0, 1, 2, // primeiro triangulo
-        0, 2, 3  // segundo triangulo
+        0, 2, 3, // segundo triangulo
+
+        4, 5, 6,
+        4, 6, 7,
+
+        8, 9, 10,
+        8, 10, 11,
+
+        12, 13, 14,
+        12, 14, 15,
+
+        16, 17, 18,
+        16, 18, 19,
+
+        20, 21, 22,
+        20, 22, 23
     };
 
     private uint _vertexArrayObject;
@@ -237,6 +277,8 @@ public class Game
 
         // descomente esta chamada para desenhar polígonos em wireframe.
         // _gl.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
+
+        _gl.Enable(EnableCap.DepthTest);
     }
 
     private void OnResize(Vector2D<int> newSize)
@@ -258,18 +300,25 @@ public class Game
 
     private void OnRender(double deltaTime)
     {
-        _gl.Clear(ClearBufferMask.ColorBufferBit);
+        _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         _shader.Use();
 
-        Matrix4x4 trans = Matrix4x4.Identity;
-        trans *= Matrix4x4.CreateFromAxisAngle(
-            Vector3.Normalize(new Vector3(0.0f, 0.0f, 1.0f)), 
-            Time.ElapsedTime
+        Matrix4x4 model = Matrix4x4.Identity;
+        model *= Matrix4x4.CreateFromAxisAngle(
+            Vector3.Normalize(new Vector3(0.5f, 1.0f, 0.0f)), 
+            MathHelper.DegressToRadians(50.0f) * Time.ElapsedTime
         );
-        trans *= Matrix4x4.CreateTranslation(new Vector3(0.5f, -0.5f, 0.0f));
 
-        _shader.SetMatrix4x4("transform", trans);
+        Matrix4x4 view = Matrix4x4.Identity;
+        view *= Matrix4x4.CreateTranslation(new Vector3(0.0f, 0.0f, -3.0f));
+
+        Matrix4x4 projection = Matrix4x4.Identity;
+        projection *= Matrix4x4.CreatePerspectiveFieldOfView(MathHelper.DegressToRadians(45.0f), (float)_window.Size.X / (float)_window.Size.Y, 0.1f, 100.0f);
+
+        _shader.SetMatrix4x4("model", model);
+        _shader.SetMatrix4x4("view", view);
+        _shader.SetMatrix4x4("projection", projection);
 
         // vincular texturas às unidades de textura correspondentes
         _gl.ActiveTexture(TextureUnit.Texture0);
@@ -281,7 +330,7 @@ public class Game
         unsafe
         {
             // renderiza o triângulo
-            _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
+            _gl.DrawElements(PrimitiveType.Triangles, 36, DrawElementsType.UnsignedInt, (void*)0);
         }
     }
 
