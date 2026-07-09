@@ -94,17 +94,7 @@ public class Game
         new Vector3(-1.3f,  1.0f, -1.5f)  
     };
 
-    private Vector3 _cameraPos = new Vector3(0.0f, 0.0f, 3.0f);
-    private Vector3 _cameraFront = new Vector3(0.0f, 0.0f, -1.0f);
-    private Vector3 _cameraUp = new Vector3(0.0f, 1.0f, 0.0f);
-
-    private bool _firstMouse = true;
-    private Vector2 _lastPos;
-
-    private float _yaw = -90.0f;
-    private float _pitch = 0.0f;
-
-    private float _fov = 45.0f;
+    private Camera _camera = null!;
 
     public Game()
     {
@@ -305,6 +295,8 @@ public class Game
 
         _gl.Enable(EnableCap.DepthTest);
 
+        _camera = new Camera();
+
         Input.CursorLockMode = CursorLockMode.Raw;
     }
 
@@ -324,63 +316,9 @@ public class Game
             _window.Close();
         }
 
-        float cameraSpeed = 2.5f * Time.DeltaTime;
-
-        if (Input.GetKey(Key.W))
-        {
-            _cameraPos += cameraSpeed * Vector3.Normalize(new Vector3(_cameraFront.X, 0.0f, _cameraFront.Z));
-        }
-        if (Input.GetKey(Key.S))
-        {
-            _cameraPos -= cameraSpeed * Vector3.Normalize(new Vector3(_cameraFront.X, 0.0f, _cameraFront.Z));
-        }
-        if (Input.GetKey(Key.A))
-        {
-            _cameraPos -= cameraSpeed * Vector3.Normalize(Vector3.Cross(_cameraFront, _cameraUp));
-        }
-        if (Input.GetKey(Key.D))
-        {
-            _cameraPos += cameraSpeed * Vector3.Normalize(Vector3.Cross(_cameraFront, _cameraUp));
-        }
-
-        if (Input.GetKey(Key.Space))
-        {
-            _cameraPos += cameraSpeed * _cameraUp;
-        }
-        if (Input.GetKey(Key.ShiftLeft))
-        {
-            _cameraPos -= cameraSpeed * _cameraUp;
-        }
-
-        if (_firstMouse)
-        {
-            _lastPos = Input.MousePositon;
-            _firstMouse = false;
-        }
-
-        float xoffset = Input.MousePositon.X - _lastPos.X;
-        float yoffset = _lastPos.Y - Input.MousePositon.Y;
-        _lastPos = Input.MousePositon;
-
-        const float sensitivity = 0.1f;
-        xoffset *= sensitivity;
-        yoffset *= sensitivity;
-
-        _yaw   += xoffset;
-        _pitch += yoffset;
-
-        _pitch = Math.Clamp(_pitch, -89.0f, 89.0f);
-
-        Vector3 direction;
-
-        direction.X = MathF.Cos(MathHelper.DegressToRadians(_pitch)) * MathF.Cos(MathHelper.DegressToRadians(_yaw));
-        direction.Y = MathF.Sin(MathHelper.DegressToRadians(_pitch));
-        direction.Z = MathF.Cos(MathHelper.DegressToRadians(_pitch)) * MathF.Sin(MathHelper.DegressToRadians(_yaw));
-
-        _cameraFront = Vector3.Normalize(direction);
-
-        _fov -= Input.MouseScrollDelta.Y;
-        _fov = Math.Clamp(_fov, 1.0f, 45.0f);
+        _camera.ProcessKeyboad();
+        _camera.ProcessMouseMovement();
+        _camera.ProcessMouseScroll();
     }
 
     private void OnRender(double deltaTime)
@@ -390,32 +328,12 @@ public class Game
         _shader.Use();
 
         Matrix4x4 model = Matrix4x4.Identity;
-        model *= Matrix4x4.CreateFromAxisAngle(
-            Vector3.Normalize(new Vector3(0.5f, 1.0f, 0.0f)), 
-            MathHelper.DegressToRadians(50.0f) * Time.ElapsedTime
-        );
-
-        const float radius = 10.0f;
-        float camX = MathF.Sin(Time.ElapsedTime) * radius;
-        float camZ = MathF.Cos(Time.ElapsedTime) * radius;
-
-        Matrix4x4 view = Matrix4x4.Identity;
-        view *= Matrix4x4.CreateLookAt(
-            _cameraPos,
-            _cameraPos + _cameraFront,
-            _cameraUp
-        );
-
-        Matrix4x4 projection = Matrix4x4.Identity;
-        projection *= Matrix4x4.CreatePerspectiveFieldOfView(
-            MathHelper.DegressToRadians(_fov), 
-            (float)_window.Size.X / (float)_window.Size.Y, 
-            0.1f, 
-            100.0f
-        );
-
         _shader.SetMatrix4x4("model", model);
+
+        Matrix4x4 view = _camera.GetViewMatrix();
         _shader.SetMatrix4x4("view", view);
+
+        Matrix4x4 projection = _camera.GetProjectionMatrix(_window);
         _shader.SetMatrix4x4("projection", projection);
 
         // vincular texturas às unidades de textura correspondentes
