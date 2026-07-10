@@ -1,30 +1,6 @@
-#region Licence
-/*
-
-*******************************************************************
-** This code is part of Breakout.
-**
-** Breakout is free software: you can redistribute it and/or modify
-** it under the terms of the CC BY 4.0 license as published by
-** Creative Commons, either version 4 of the License, or (at your
-** option) any later version.
-******************************************************************
-
-[pt-BR]
-
-*******************************************************************
-** Este código faz parte do Breakout.
-**
-** O Breakout é um software livre: você pode redistribuí-lo e/ou modificá-lo
-** sob os termos da licença CC BY 4.0, conforme publicada pela
-** Creative Commons, seja a versão 4 da Licença ou (a seu
-** critério) qualquer versão posterior.
-******************************************************************
-
-*/
-#endregion
-
 using System.Numerics;
+using Silk.NET.OpenGL;
+using StbImageSharp;
 
 namespace Breakout;
 
@@ -41,6 +17,8 @@ public enum GameState
 // facilitar o acesso a cada um dos componentes e o gerenciamento.
 public class Game
 {
+    private GL _gl = Program.GL;
+
     // game state
     public GameState State;
     public uint Width, Height;
@@ -64,10 +42,10 @@ public class Game
     // inicializar o estado do jogo (carregar todos os shaders/texturas/níveis)
     public void Init()
     {
-        // load shaders
+        // carregar shaders
         ResourceManager.LoadShader(
-            vShaderFile: "res/Shaders/sprite/vertex.glsl",
-            fShaderFile: "res/Shaders/sprite/fragment.glsl",
+            vShaderFile: "res/Shaders/base/vertex.glsl",
+            fShaderFile: "res/Shaders/base/fragment.glsl",
             gShaderFile: null,
             name:        "sprite"
         );
@@ -86,14 +64,14 @@ public class Game
         ResourceManager.GetShader("sprite").SetMatrix4("projection", projection);
 
         // definir controles específicos de renderização
-        Renderer = new SpriteRenderer(ResourceManager.GetShader("sprite"));
+        Renderer = new SpriteRenderer(ResourceManager.GetShader("sprite"));   
 
         // carregar texturas
         ResourceManager.LoadTexture(
             file:  "res/Textures/awesomeface.png", 
             alpha: true, 
             name:  "face"
-        );
+        );     
     }
 
     public void ProcessInput(float deltaTime)

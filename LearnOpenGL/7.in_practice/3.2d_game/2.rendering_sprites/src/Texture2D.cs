@@ -1,29 +1,3 @@
-#region Licence
-/*
-
-*******************************************************************
-** This code is part of Breakout.
-**
-** Breakout is free software: you can redistribute it and/or modify
-** it under the terms of the CC BY 4.0 license as published by
-** Creative Commons, either version 4 of the License, or (at your
-** option) any later version.
-******************************************************************
-
-[pt-BR]
-
-*******************************************************************
-** Este código faz parte do Breakout.
-**
-** O Breakout é um software livre: você pode redistribuí-lo e/ou modificá-lo
-** sob os termos da licença CC BY 4.0, conforme publicada pela
-** Creative Commons, seja a versão 4 da Licença ou (a seu
-** critério) qualquer versão posterior.
-******************************************************************
-
-*/
-#endregion
-
 using Silk.NET.OpenGL;
 
 namespace Breakout;
@@ -33,7 +7,7 @@ namespace Breakout;
 public class Texture2D
 {
     private GL _gl = Program.GL;
-    
+
     // armazena o ID do objeto de textura, usado em todas as operações de textura para referenciar essa textura específica
     public uint ID;
 
@@ -69,15 +43,15 @@ public class Texture2D
     public void Generate(uint width, uint height, byte[] data)
     {
         Width = width;
-        Height = height;
+        Height = height;        
 
         // create Texture
         _gl.BindTexture(TextureTarget.Texture2D, ID);
-        unsafe
+        unsafe 
         {
             fixed (byte* ptr = data) 
             {
-                _gl.TexImage2D(TextureTarget.Texture2D, 0, Internal_Format, width, height, 0, Image_Format, PixelType.UnsignedByte, data);
+                _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
             }
         }
 

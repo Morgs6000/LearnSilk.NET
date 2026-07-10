@@ -9,7 +9,7 @@ namespace Breakout;
 public class Program
 {
     private static IWindow _window = null!;
-
+    
     private static GL _gl = null!;
     public static GL GL = null!;
 
@@ -63,9 +63,6 @@ public class Program
         // ---------------
         Breakout = new Game(SCREEN_WIDTH, SCREEN_HEIGHT);
         Breakout.Init();
-
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
     }
 
     private static void OnResize(Vector2D<int> newSize)
@@ -78,6 +75,12 @@ public class Program
     {
         Input.NewFrame();
 
+        // quando o usuário pressiona a tecla Esc, definimos a propriedade WindowShouldClose como true, fechando o aplicativo
+        if (Input.GetKey(Key.Escape))
+        {
+            _window.Close();
+        }
+
         // gerenciar a entrada do usuário
         // ------------------------------
         Breakout.ProcessInput((float)deltaTime);
@@ -85,12 +88,6 @@ public class Program
         // atualizar estado do jogo
         // ------------------------
         Breakout.Update((float)deltaTime);
-
-        // quando o usuário pressiona a tecla Esc, definimos a propriedade WindowShouldClose como true, fechando o aplicativo
-        if (Input.GetKey(Key.Escape))
-        {
-            _window.Close();
-        }
     }
 
     private static void OnRender(double deltaTime)

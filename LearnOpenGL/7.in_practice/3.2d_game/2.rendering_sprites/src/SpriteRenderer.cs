@@ -1,29 +1,3 @@
-#region Licence
-/*
-
-*******************************************************************
-** This code is part of Breakout.
-**
-** Breakout is free software: you can redistribute it and/or modify
-** it under the terms of the CC BY 4.0 license as published by
-** Creative Commons, either version 4 of the License, or (at your
-** option) any later version.
-******************************************************************
-
-[pt-BR]
-
-*******************************************************************
-** Este código faz parte do Breakout.
-**
-** O Breakout é um software livre: você pode redistribuí-lo e/ou modificá-lo
-** sob os termos da licença CC BY 4.0, conforme publicada pela
-** Creative Commons, seja a versão 4 da Licença ou (a seu
-** critério) qualquer versão posterior.
-******************************************************************
-
-*/
-#endregion
-
 using System.Numerics;
 using MySilkProgram;
 using Silk.NET.OpenGL;
@@ -49,39 +23,36 @@ public class SpriteRenderer
     // Destrutor
     ~SpriteRenderer()
     {
-        _gl.DeleteVertexArrays(1, ref _quadVAO);
+        
     }
 
     // Renderiza um quadrilátero definido texturizado com o sprite fornecido
-    public void DrawSprite(Texture2D texture, Vector2 position, Vector2? size, float rotate = 0.0f, Vector3? color = null)
-    {
-        Vector2 finalSize = size ?? new Vector2(10.0f, 10.0f);
-        Vector3 finalColor = color ?? new Vector3(1.0f);
-
+    public void DrawSprite(Texture2D texture, Vector2 position, Vector2 size, float rotate, Vector3 color)
+    {        
         // preparar transformações
         _shader.Use();
 
         Matrix4x4 model = Matrix4x4.Identity;
 
-        model *= Matrix4x4.CreateTranslation(new Vector3(position, 0.0f));
+        model *= Matrix4x4.CreateScale(new Vector3(size, 1.0f));
 
-        model *= Matrix4x4.CreateTranslation( // mover a origem da rotação para o centro do quadrilátero
-            new Vector3(0.5f * finalSize.X, 0.5f * finalSize.Y, 0.0f)
+        model *= Matrix4x4.CreateTranslation( // mover a origem de volta
+            new Vector3(-0.5f * size.X, -0.5f * size.Y, 0.0f)
         );
         model *= Matrix4x4.CreateFromAxisAngle( // depois rotacione
             Vector3.Normalize(new Vector3(0.0f, 0.0f, 1.0f)),
             MathHelper.DegressToRadians(rotate)
         );
-        model *= Matrix4x4.CreateTranslation( // mover a origem de volta
-            new Vector3(-0.5f * finalSize.X, -0.5f * finalSize.Y, 0.0f)
+        model *= Matrix4x4.CreateTranslation( // mover a origem da rotação para o centro do quadrilátero
+            new Vector3(0.5f * size.X, 0.5f * size.Y, 0.0f)
         );
 
-        model *= Matrix4x4.CreateScale(new Vector3(finalSize, 1.0f));
+        model *= Matrix4x4.CreateTranslation(new Vector3(position, 0.0f));
 
         _shader.SetMatrix4("model", model);
 
         // renderizar quadrilátero texturizado
-        _shader.SetVector3f("spriteColor", finalColor);
+        _shader.SetVector3f("spriteColor", color);
 
         _gl.ActiveTexture(TextureUnit.Texture0);
         texture.Bind();
@@ -100,13 +71,13 @@ public class SpriteRenderer
         float[] vertices =
         {
             // pos        // tex
-            0.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 
-
-            0.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, 1.0f, 1.0f, 1.0f,
-            1.0f, 0.0f, 1.0f, 0.0f
+            0.0f, 0.0f,   0.0f, 0.0f, // 0
+            1.0f, 0.0f,   1.0f, 0.0f, // 1
+            1.0f, 1.0f,   1.0f, 1.0f, // 2
+            
+            0.0f, 0.0f,   0.0f, 0.0f, // 0
+            1.0f, 1.0f,   1.0f, 1.0f, // 2
+            0.0f, 1.0f,   0.0f, 1.0f  // 3
         };
 
         _gl.GenVertexArrays(1, out _quadVAO);
