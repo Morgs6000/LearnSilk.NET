@@ -15,6 +15,7 @@ using static FreeTypeSharp.FT_Render_Mode_;
 
 namespace MySilkProgram;
 
+// Armazena todas as informações de estado relevantes para um caractere, conforme carregado usando o FreeType.
 public struct Character
 {
     public uint TextureID;  // Identificador da textura do glifo
@@ -102,78 +103,90 @@ public class Game
 
             FT_LibraryRec_* ft;
 
+            // Todas as funções retornam um valor diferente de 0 sempre que ocorre um erro
             if (FT_Init_FreeType(&ft) != 0)
             {
                 Console.WriteLine("ERROR::FREETYPE: Could not init FreeType Library");
                 return;
             }
 
+            // encontrar caminho para a fonte
+            string font_name = "res/Fonts/arial.ttf";
+            if ( font_name == string.Empty)
+            {
+                Console.WriteLine("ERROR::FREETYPE: Failed to load font_name");
+                return;
+            }
+
+            // carregar fonte como face
             FT_FaceRec_* face;
-            if (FT_New_Face(ft, (byte*)Marshal.StringToHGlobalAnsi("res/Fonts/arial.ttf"), 0, &face) != 0)
+            if (FT_New_Face(ft, (byte*)Marshal.StringToHGlobalAnsi(font_name), 0, &face) != 0)
             {
                 Console.WriteLine("ERROR::FREETYPE: Failed to load font");
                 return;
             }
-
-            FT_Set_Pixel_Sizes(face, 0, 48);
-
-            /*
-            if (FT_Load_Char(face, 'X', FT_LOAD_RENDER) != 0)
+            else
             {
-                Console.WriteLine("ERROR::FREETYTPE: Failed to load Glyph");
-                return;
-            }
-            //*/
+                // Defina o tamanho para carregar os glifos como
+                FT_Set_Pixel_Sizes(face, 0, 48);
 
-            _gl.PixelStore(GLEnum.UnpackAlignment, 1); // desativar a restrição de alinhamento de bytes
+                // desativar a restrição de alinhamento de bytes
+                _gl.PixelStore(GLEnum.UnpackAlignment, 1);
 
-            for (uint c = 0; c < 128; c++)
-            {
-                // carregar glifo de caractere
-                if (FT_Load_Char(face, c, FT_LOAD_RENDER) != 0)
+                // carrega os primeiros 128 caracteres do conjunto ASCII
+                for (uint c = 0; c < 128; c++)
                 {
-                    Console.WriteLine("ERROR::FREETYTPE: Failed to load Glyph");
-                    return;
+                    // carregar glifo de caractere
+                    if (FT_Load_Char(face, c, FT_LOAD_RENDER) != 0)
+                    {
+                        Console.WriteLine("ERROR::FREETYTPE: Failed to load Glyph");
+                        continue;
+                    }
+
+                    // generate texture
+                    uint texture;
+                    _gl.GenTextures(1, out texture);
+                    _gl.BindTexture(TextureTarget.Texture2D, texture);
+                    _gl.TexImage2D(
+                        TextureTarget.Texture2D,
+                        0,
+                        InternalFormat.Red,
+                        face->glyph->bitmap.width,
+                        face->glyph->bitmap.rows,
+                        0,
+                        PixelFormat.Red,
+                        PixelType.UnsignedByte,
+                        face->glyph->bitmap.buffer
+                    );
+
+                    // set texture options
+                    _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+                    _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+                    _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+                    _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+                    // agora armazene o caractere para uso posterior
+                    Character character = new Character
+                    {
+                        TextureID = texture,
+                        Size = new Vector2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+                        Bearing = new Vector2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+                        Advance = (uint)face->glyph->advance.x,
+                    };
+
+                    Characters.Add(c, character);
                 }
 
-                // generate texture
-                uint texture;
-                _gl.GenTextures(1, out texture);
-                _gl.BindTexture(TextureTarget.Texture2D, texture);
-                _gl.TexImage2D(
-                    TextureTarget.Texture2D,
-                    0,
-                    InternalFormat.Red,
-                    face->glyph->bitmap.width,
-                    face->glyph->bitmap.rows,
-                    0,
-                    PixelFormat.Red,
-                    PixelType.UnsignedByte,
-                    face->glyph->bitmap.buffer
-                );
-
-                // set texture options
-                _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-                _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-                _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-                _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-                // agora armazene o caractere para uso posterior
-                Character character = new Character
-                {
-                    TextureID = texture,
-                    Size = new Vector2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-                    Bearing = new Vector2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-                    Advance = (uint)face->glyph->advance.x,
-                };
-
-                Characters.Add(c, character);
+                _gl.BindTexture(TextureTarget.Texture2D, 0);
             }
 
+            // destruir o FreeType assim que terminarmos
             FT_Done_Face(face);
             FT_Done_FreeType(ft);
         }
 
+        // configurar VAO/VBO para quads de textura
+        // ----------------------------------------
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
@@ -244,6 +257,8 @@ public class Game
         );
     }
 
+    // render line of text
+    // -------------------
     private void RenderText(Shader shader, string text, float x, float y, float scale, Vector3 color)
     {
         // ativar o estado de renderização correspondente
@@ -255,10 +270,7 @@ public class Game
         // percorrer todos os caracteres
         foreach (var c in text)
         {
-            if (!Characters.TryGetValue(c, out Character ch))
-            {
-                continue;
-            }
+            Character ch = Characters[c];
 
             float xpos = x + ch.Bearing.X * scale;
             float ypos = y - (ch.Size.Y - ch.Bearing.Y) * scale;
