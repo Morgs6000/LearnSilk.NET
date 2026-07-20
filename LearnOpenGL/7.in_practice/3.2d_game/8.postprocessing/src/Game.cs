@@ -1,4 +1,5 @@
 using System.Numerics;
+using Breakout.Utilities;
 using MySilkProgram.Inputs;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
@@ -34,7 +35,12 @@ public class Game
     public GameState State;
     public uint Width, Height;
 
+    // Game-related State data
     private SpriteRenderer Renderer = null!;
+    private GameObject Player = null!;
+    private BallObject Ball = null!;
+    private ParticleGenerator Particles = null!;
+    private PostProcessor Effects = null!;
 
     private List<GameLevel> Levels = new List<GameLevel>();
     private int Level;
@@ -45,17 +51,13 @@ public class Game
     // Velocidade inicial da raquete do jogador
     private float PLAYER_VELOCITY = 500.0f;
 
-    private GameObject Player = null!;
-
     // Velocidade inicial da bola
     private Vector2 INITIAL_BALL_VELOCITY = new Vector2(100.0f, -350.0f);
 
     // Raio do objeto bola
     private const float BALL_RADIUS = 12.5f;
 
-    private BallObject Ball = null!;
-
-    private ParticleGenerator Particles = null!;
+    private float ShakeTime = 0.0f;
 
     // constructor
     public Game(uint width, uint height)
@@ -89,6 +91,13 @@ public class Game
             name:        "particle"
         );
 
+        ResourceManager.LoadShader(
+            vShaderFile: "res/Shaders/post_processing/vertex.glsl",
+            fShaderFile: "res/Shaders/post_processing/fragment.glsl",
+            gShaderFile: null,
+            name:        "postprocessing"
+        );
+
         // configure shaders
         Matrix4x4 projection = Matrix4x4.CreateOrthographicOffCenter(
             left:        0.0f, 
@@ -102,8 +111,8 @@ public class Game
         ResourceManager.GetShader("sprite").Use().SetInteger("image", 0);
         ResourceManager.GetShader("sprite").SetMatrix4("projection", projection);
 
-        // definir controles específicos de renderização
-        Renderer = new SpriteRenderer(ResourceManager.GetShader("sprite"));   
+        ResourceManager.GetShader("particle").Use().SetInteger("sprite", 0);
+        ResourceManager.GetShader("particle").SetMatrix4("projection", projection);  
 
         // carregar texturas
         ResourceManager.LoadTexture(
@@ -142,6 +151,21 @@ public class Game
             name:  "particle"
         );
 
+        // definir controles específicos de renderização
+        Renderer = new SpriteRenderer(ResourceManager.GetShader("sprite")); 
+
+        Particles = new ParticleGenerator(
+            ResourceManager.GetShader("particle"),
+            ResourceManager.GetTexture("particle"),
+            500
+        );
+
+        Effects = new PostProcessor(
+            ResourceManager.GetShader("postprocessing"),
+            Width, 
+            Height
+        );
+
         // load levels
 
         GameLevel one = new GameLevel(); one.Load(
@@ -175,6 +199,8 @@ public class Game
 
         Level = 0;
 
+        // configure game objects
+
         Vector2 playerPos = new Vector2(
             Width / 2.0f - PLAYER_SIZE.X / 2.0f,
             Height - PLAYER_SIZE.Y
@@ -196,12 +222,6 @@ public class Game
             radius:   BALL_RADIUS, 
             velocity: INITIAL_BALL_VELOCITY,
             sprite:   ResourceManager.GetTexture("face")
-        );
-
-        Particles = new ParticleGenerator(
-            ResourceManager.GetShader("particle"),
-            ResourceManager.GetTexture("particle"),
-            500
         );
     }
 
@@ -251,39 +271,62 @@ public class Game
         // check for collisions
         DoCollisions();
 
+        // update particles
+        Particles.Update(deltaTime, Ball, 2, new Vector2(Ball.Radius / 2.0f));
+
+        // reduzir o tempo de vibração
+        if (ShakeTime > 0.0f)
+        {
+            ShakeTime -= deltaTime;
+
+            if (ShakeTime <= 0.0f)
+            {
+                Effects.Shake = false;
+            }
+        }
+
+        // verifica a condição de derrota
         if (Ball.Position.Y >= Height) // a bola chegou à borda inferior?
         {
             ResetLevel();
             ResetPlayer();
         }
-
-        // update particles
-        Particles.Update(deltaTime, Ball, 2, new Vector2(Ball.Radius / 2.0f));
     }
 
     public void Render()
     {
         if (State == GameState.GAME_ACTIVE)
         {
-            // draw background
-            Renderer.DrawSprite(
-                texture:  ResourceManager.GetTexture("background"),
-                position: new Vector2(0.0f, 0.0f),
-                size:     new Vector2(Width, Height),
-                rotate:   0.0f
-            );
+            // iniciar a renderização para o framebuffer de pós-processamento
+            Effects.BeginRender();
 
-            // draw level
-            Levels[Level].Draw(Renderer);
+            {
+                // draw background
+                Renderer.DrawSprite(
+                    texture:  ResourceManager.GetTexture("background"),
+                    position: new Vector2(0.0f, 0.0f),
+                    size:     new Vector2(Width, Height),
+                    rotate:   0.0f
+                );
 
-            // draw player
-            Player.Draw(Renderer);
+                // draw level
+                Levels[Level].Draw(Renderer);
 
-            // draw particles
-            Particles.Draw();
+                // draw player
+                Player.Draw(Renderer);
 
-            // draw ball
-            Ball.Draw(Renderer);
+                // draw particles
+                Particles.Draw();
+
+                // draw ball
+                Ball.Draw(Renderer);
+            }
+
+            // finalizar a renderização para o framebuffer de pós-processamento
+            Effects.EndRender();
+
+            // renderizar quad de pós-processamento
+            Effects.Render(Time.ElapsedTime);
         }
     }
 
@@ -354,6 +397,12 @@ public class Game
                     if (!box.IsSolid)
                     {
                         box.Destroyed = true;
+                    }
+                    else
+                    {
+                        // se o bloco for sólido, habilite o efeito de tremor
+                        ShakeTime = 0.05f;
+                        Effects.Shake = true;
                     }
 
                     // resolução de colisões

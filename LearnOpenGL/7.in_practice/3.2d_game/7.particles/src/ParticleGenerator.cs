@@ -53,7 +53,7 @@ public class ParticleGenerator
         for (uint i = 0; i < newParticles; i++)
         {
             int unusedParticle = FirstUnusedParticle();
-            RespawnParticle(_particles[unusedParticle], obj, offset);
+            RespawnParticle(unusedParticle, obj, offset);
         }
 
         // update all particles
@@ -68,6 +68,8 @@ public class ParticleGenerator
                 p.Position -= p.Velocity * dt;
                 p.Color.W -= dt * 2.5f;
             }
+            
+            _particles[i] = p;
         }
     }   
 
@@ -164,15 +166,20 @@ public class ParticleGenerator
     }
 
     // respawns particle
-    private void RespawnParticle(Particle particle, GameObject obj, Vector2 offset)
+    private void RespawnParticle(int index, GameObject obj, Vector2 offset)
     {
         Random rand = new Random();
 
-        float random = ((rand.Next() % 100) - 50) / 10.0f;
-        float rColor = 0.5f + ((rand.Next() % 100) / 100.0f);
+        float random = (((float)rand.Next() % 100) - 50) / 10.0f;
+        float rColor = 0.5f + (((float)rand.Next() % 100) / 100.0f);
+
+        Particle particle = _particles[index];
+
         particle.Position = obj.Position + new Vector2(random) + offset;
         particle.Color = new Vector4(rColor, rColor, rColor, 1.0f);
         particle.Life = 1.0f;
         particle.Velocity = obj.Velocity * 1.0f;
+
+        _particles[index] = particle;
     }
 }
